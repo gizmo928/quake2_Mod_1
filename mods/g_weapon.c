@@ -1,6 +1,16 @@
 #include "g_local.h"
 
 
+
+void SleepTarget(edict_t * target, edict_t *inflictor , int duration, int damage)
+{
+	target->poison_level = duration; // was just += duration, changed to =duration
+	target->poison_damage = (target->poison_damage * 0.7) + (damage * 0.3); // was damage
+	target->poisoner = inflictor;
+	//target->poison_step = 10;
+
+}
+
 /*
 =================
 check_dodge
@@ -89,7 +99,11 @@ qboolean fire_hit (edict_t *self, vec3_t aim, int damage, int kick)
 	VectorSubtract (point, self->enemy->s.origin, dir);
 
 	// do the damage
-	T_Damage (tr.ent, self, self, dir, point, vec3_origin, damage, kick/2, DAMAGE_NO_KNOCKBACK, MOD_HIT);
+	//tr.ent->poison_level = 100;
+	//tr.ent->poison_damage = 20;
+	//tr.ent->poisoner = self;
+	//tr.ent->poison_step = 10; // these all were added
+	T_Damage (tr.ent, self, self, dir, point, vec3_origin, damage, kick/2, DAMAGE_NO_KNOCKBACK, MOD_HIT); // kick was /2
 
 	if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client))
 		return false;
@@ -245,6 +259,11 @@ static void fire_lead (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
 		gi.multicast (pos, MULTICAST_PVS);
 	}
 }
+/*
+==============================
+FIRE POISON FUNCTION 
+==============================
+*/
 
  void fire_poison(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int te_impact, int hspread, int vspread, int mod)
 {
@@ -337,10 +356,16 @@ static void fire_lead (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
 		{//modified for player to take poison damage, kick is how long poisoned
 			if (tr.ent->takedamage)
 			{
-				tr.ent->poison_level = kick;
-				tr.ent->poison_damage = damage;
+				//SleepTarget(tr.ent, self, kick, damage);
+					 
+				tr.ent->poison_level += kick; // was just  = kick, he has just +=kick, now is just duration look at 2nd video 19:20
+				tr.ent->poison_damage = damage;// (tr.ent->poison_damage * 0.7) + (damage * 0.3); // was damage
 				tr.ent->poisoner = self; 
-				T_Damage(tr.ent, self, self, aimdir, tr.endpos, tr.plane.normal, damage, kick, DAMAGE_BULLET, mod);
+				//tr.ent->poison_step = 10;
+				
+				//tr.ent->client->blindBase = BLIND_FLASH; // added idk if this works or not
+
+				//T_Damage(tr.ent, self, self, aimdir, tr.endpos, tr.plane.normal, damage, kick, DAMAGE_BULLET, mod); // this is deleted but no damage is done to single play mons
 			}
 			else
 			{
@@ -393,7 +418,7 @@ pistols, rifles, etc....
 */
 void fire_bullet (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int mod)
 {
-	fire_lead (self, start, aimdir, damage, kick, TE_GUNSHOT, hspread, vspread, mod); //scanhit, but what if i used the fire_poison func into here instead of in p_weapon.c????
+	fire_lead (self, start, aimdir, damage, kick, TE_GUNSHOT, hspread, vspread, mod); // switching fire_lead to fire_poison
 	
 }
 
@@ -443,8 +468,10 @@ void blaster_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *
 			mod = MOD_HYPERBLASTER;
 		else
 			mod = MOD_BLASTER;
+
+		SleepTarget(other, self, 30, 5); // added 4/27 instead of 1 was 10
 		
-		T_Damage (other, self, self->owner, self->velocity, self->s.origin, plane->normal, self->dmg, 1, DAMAGE_ENERGY, mod); //modify this
+		//T_Damage (other, self, self->owner, self->velocity, self->s.origin, plane->normal, self->dmg, 1, DAMAGE_ENERGY, mod); // this was deleted
 	}
 	else
 	{
@@ -493,7 +520,7 @@ void fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int spee
 	bolt->owner = self;
 	bolt->touch = blaster_touch;
 	bolt->nextthink = level.time + 2;
-	bolt->think = G_FreeEdict;
+	bolt->think = G_FreeEdict; 
 	bolt->dmg = damage;
 	bolt->classname = "bolt";
 	if (hyper)
@@ -708,7 +735,7 @@ void fire_grenade_prox (edict_t *self, vec3_t start, vec3_t aimdir, int damage, 
 	//grenade->think = Grenade_Explode; 
 	grenade->nextthink = level.time + .1;
 	grenade->think = proxim_think;
-	grenade->delay = level.time + 60;
+	grenade->delay = level.time + 60; // dont know what this means
 	grenade->dmg = damage;
 	grenade->dmg_radius = damage_radius;
 	grenade->classname = "grenade";
@@ -746,6 +773,8 @@ void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int sp
 	grenade->dmg_radius = damage_radius;
 	grenade->classname = "grenade";
 
+	
+
 	gi.linkentity(grenade);
 }
 
@@ -778,12 +807,14 @@ void fire_grenade2 (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int 
 
 	grenade->nextthink = level.time + .1;
 	grenade->think = proxim_think;
-	grenade->delay = level.time + 28;// was 60, timer
+	grenade->delay = level.time + 6;// was 60, timer then was 28
 
 
 	grenade->dmg = damage;
 	grenade->dmg_radius = damage_radius;
 	grenade->classname = "hgrenade";
+
+
 	if (held)
 		grenade->spawnflags = 3;
 	else
@@ -960,7 +991,7 @@ void fire_rocket(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed,
 	VectorCopy(start, rocket->s.origin);
 	VectorCopy(dir, rocket->movedir);
 	vectoangles(dir, rocket->s.angles);
-	VectorScale(dir, speed, rocket->velocity);
+	VectorScale(dir, speed, rocket->velocity); // has speed, was speed
 	rocket->movetype = MOVETYPE_FLYMISSILE;  
 	rocket->clipmask = MASK_SHOT;
 	rocket->solid = SOLID_BBOX;

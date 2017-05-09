@@ -17,7 +17,6 @@ void Weapon_GrenadeLauncher (edict_t *ent);
 void Weapon_Railgun (edict_t *ent);
 void Weapon_BFG (edict_t *ent);
 void Weapon_Tranquilizer(edict_t *ent);
-
 gitem_armor_t jacketarmor_info	= { 25,  50, .30, .00, ARMOR_JACKET};
 gitem_armor_t combatarmor_info	= { 50, 100, .60, .30, ARMOR_COMBAT};
 gitem_armor_t bodyarmor_info	= {100, 200, .80, .60, ARMOR_BODY};
@@ -325,8 +324,6 @@ void Use_Quad (edict_t *ent, gitem_t *item)
 	ent->client->pers.inventory[ITEM_INDEX(item)]--;
 	ValidateSelectedItem (ent);
 
-	respawn(ent); // was off
-
 	if (quad_drop_timeout_hack)
 	{
 		timeout = quad_drop_timeout_hack;
@@ -352,14 +349,10 @@ void Use_Breather (edict_t *ent, gitem_t *item)
 	ent->client->pers.inventory[ITEM_INDEX(item)]--;
 	ValidateSelectedItem (ent);
 
-	
-
 	if (ent->client->breather_framenum > level.framenum)
 		ent->client->breather_framenum += 300;
 	else
 		ent->client->breather_framenum = level.framenum + 300;
-
-	ent->svflags |= SVF_NOCLIENT; // makes ya invisible
 
 //	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
@@ -547,13 +540,7 @@ qboolean Pickup_Health (edict_t *ent, edict_t *other)
 		if (other->health >= other->max_health)
 			return false;
 
-	other->health += ent->count; // was ent->count
-
-	if  (other->health > 50 && other->client->lowlight ==1)
-		Cmd_Lowlight_f(other); // to turn off lowlight if pickuped health is above 50
-
-	if (other->health > 25 && other->client->lowerlight ==1)
-		Cmd_Lowerlight_f(other); // to turn off lowerlight if pickedup health is above 25
+	other->health += ent->count;
 
 	if (!(ent->style & HEALTH_IGNORE_MAX))
 	{
@@ -1533,10 +1520,10 @@ always owned, never in the world
 /* precache */ "sprites/s_bfg1.sp2 sprites/s_bfg2.sp2 sprites/s_bfg3.sp2 weapons/bfg__f1y.wav weapons/bfg__l1a.wav weapons/bfg__x1b.wav weapons/bfg_hum.wav"
 	},
 
-	/* THE TRANQUILIZER */ // ADDED SPECIFICALLY FOR THIS MOD I AM MAKING
+	/* THE TRANQUILIZER */ // ADDED SPECIFICALLY FORTHIS MOD I AM MAKING
 
 	{
-		"weapon_Tranquilizer", 
+		"weapon_Tranquilizer", // might change this
 		NULL,
 		Use_Weapon,
 		NULL,
@@ -1600,7 +1587,7 @@ always owned, never in the world
 		10, // was 50
 		NULL,
 		IT_AMMO,
-		0, // was 0
+		0,
 		NULL,
 		AMMO_BULLETS,
 /* precache */ ""
@@ -2144,7 +2131,7 @@ void SP_item_health (edict_t *self)
 	}
 
 	self->model = "models/items/healing/medium/tris.md2";
-	self->count = 10; // cube health that provide 10
+	self->count = 10;
 	SpawnItem (self, FindItem ("Health"));
 	gi.soundindex ("items/n_health.wav");
 }
@@ -2160,7 +2147,7 @@ void SP_item_health_small (edict_t *self)
 	}
 
 	self->model = "models/items/healing/stimpack/tris.md2";
-	self->count = 2; // stimpacks found easily
+	self->count = 2;
 	SpawnItem (self, FindItem ("Health"));
 	self->style = HEALTH_IGNORE_MAX;
 	gi.soundindex ("items/s_health.wav");
@@ -2177,7 +2164,7 @@ void SP_item_health_large (edict_t *self)
 	}
 
 	self->model = "models/items/healing/large/tris.md2";
-	self->count = 25; // on top of deathmatch enxt to glauncher andarmor
+	self->count = 25;
 	SpawnItem (self, FindItem ("Health"));
 	gi.soundindex ("items/l_health.wav");
 }
@@ -2193,7 +2180,7 @@ void SP_item_health_mega (edict_t *self)
 	}
 
 	self->model = "models/items/mega_h/tris.md2";
-	self->count = 100; // big one on top of crate hard to get and decreases by 1
+	self->count = 100;
 	SpawnItem (self, FindItem ("Health"));
 	gi.soundindex ("items/m_health.wav");
 	self->style = HEALTH_IGNORE_MAX|HEALTH_TIMED;

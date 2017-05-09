@@ -418,6 +418,7 @@ void Cmd_Drop_f (edict_t *ent)
 
 	s = gi.args();
 	it = FindItem (s);
+	
 	if (!it)
 	{
 		gi.cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
@@ -904,7 +905,58 @@ void Cmd_PlayerList_f(edict_t *ent)
 	}
 	gi.cprintf(ent, PRINT_HIGH, "%s", text);
 }
+/*-----------------------------
+LOWLIGHT FUNCITON
 
+
+-------------------------------*/
+void Cmd_Lowlight_f(edict_t *ent)
+{
+	if (ent->client->lowlight ^= 1)
+	{
+		gi.cvar_forceset("gl_saturatelighting", "1");
+		gi.cvar_forceset("r_fullbright", "1");
+		ent->client->ps.fov = 60; // was 75
+		
+
+	}
+	
+	else
+	{
+		gi.cvar_forceset("gl_saturatelighting", "0");
+		gi.cvar_forceset("r_fullbright", "0");
+		ent->client->ps.fov = 90;
+	}
+	
+}
+
+
+
+/*-----------------------------
+LOWERLIGHT FUNCITON
+
+
+
+-------------------------------*/
+void Cmd_Lowerlight_f(edict_t *ent)
+{
+	if (ent->client->lowerlight ^= 1)
+	{
+		gi.cvar_forceset("gl_saturatelighting", "1");
+		gi.cvar_forceset("r_fullbright", "1");
+		ent->client->ps.fov = 45; // was 75
+		//ent->client->lowlight = 0;
+
+	}
+	
+	else
+	{
+		gi.cvar_forceset("gl_saturatelighting", "0");
+		gi.cvar_forceset("r_fullbright", "0");
+		ent->client->ps.fov = 60;
+		ent->client->lowlight = 1; //not sure hmmm
+	}
+}
 
 /*
 =================
@@ -995,6 +1047,9 @@ void ClientCommand (edict_t *ent)
 		Cmd_Homing_f(ent);
 	else if (Q_stricmp(cmd, "playerlist") == 0)
 		Cmd_PlayerList_f(ent);
+	else if (Q_stricmp(cmd, "lowlight") == 0)
+		Cmd_Lowlight_f(ent);
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, false, true);
 }
+

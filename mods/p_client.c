@@ -12,7 +12,7 @@ void SP_misc_teleporter_dest (edict_t *ent);
 // this function is an ugly as hell hack to fix some map flaws
 //
 // the coop spawn spots on some maps are SNAFU.  There are coop spots
-// with the wrong targetname as well as spots with no name at all
+// with the wrong targetname as well as spots withF no name at all
 //
 // we use carnal knowledge of the maps to fix the coop spot targetnames to match
 // that of the nearest named single player spot
@@ -368,6 +368,11 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 				message = "was put to sleep by";
 				message2 = "Tranquilizer";
 				break;
+
+			case MOD_SLEEP:
+				message = "was slept by";
+				message2 = "Sleep darts";
+				break;
 			}
 			if (message)
 			{
@@ -517,16 +522,17 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 
 		// clear inventory
 		// this is kind of ugly, but it's how we want to handle keys in coop
+		/*
 		for (n = 0; n < game.num_items; n++)
 		{
 			if (coop->value && itemlist[n].flags & IT_KEY)
 				self->client->resp.coop_respawn.inventory[n] = self->client->pers.inventory[n];
 			self->client->pers.inventory[n] = 0;
-		}
+		}*/ // ddoesnt clear inventory
 	}
 
 	// remove powerups
-	self->client->quad_framenum = 0;
+	self->client->quad_framenum = 0; 
 	self->client->invincible_framenum = 0;
 	self->client->breather_framenum = 0;
 	self->client->enviro_framenum = 0;
@@ -575,6 +581,7 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	}
 
 	self->deadflag = DEAD_DEAD;
+	gi.centerprintf(self, "You are now asleep\n");
 
 	gi.linkentity (self);
 }
@@ -593,22 +600,21 @@ void InitClientPersistant (gclient_t *client)
 {
 	gitem_t		*item;
 
-	memset (&client->pers, 0, sizeof(client->pers));
-
+	memset (&client->pers, 0, sizeof(client->pers)); // 1 gives you everything?? instead of 0
 	item = FindItem("Tranquilizer"); //was Blaster
 	client->pers.selected_item = ITEM_INDEX(item);
-	client->pers.inventory[client->pers.selected_item] = 1;
+	client->pers.inventory[client->pers.selected_item] = 1; 
 
 	client->pers.weapon = item;
 
 	client->pers.health			= 100;
 	client->pers.max_health		= 100;
 
-	client->pers.max_bullets	= 200;
+	client->pers.max_bullets	= 200; // was 200
 	client->pers.max_shells		= 100;
 	client->pers.max_rockets	= 50;
 	client->pers.max_grenades	= 50;
-	client->pers.max_cells		= 200;
+	client->pers.max_cells		= 200; // was 200
 	client->pers.max_slugs		= 50;
 	client->pers.homing_state = 0;
 
@@ -647,6 +653,7 @@ void SaveClientData (void)
 			continue;
 		game.clients[i].pers.health = ent->health;
 		game.clients[i].pers.max_health = ent->max_health;
+		//game.clients[i].pers. = ent->max_health;
 		game.clients[i].pers.savedFlags = (ent->flags & (FL_GODMODE|FL_NOTARGET|FL_POWER_ARMOR));
 		if (coop->value)
 			game.clients[i].pers.score = ent->client->resp.score;
@@ -660,6 +667,7 @@ void FetchClientEntData (edict_t *ent)
 	ent->flags |= ent->client->pers.savedFlags;
 	if (coop->value)
 		ent->client->resp.score = ent->client->pers.score;
+
 }
 
 
@@ -983,6 +991,7 @@ void respawn (edict_t *self)
 		self->client->ps.pmove.pm_time = 14;
 
 		self->client->respawn_time = level.time;
+		gi.centerprintf(self, "You are now awake\n");
 
 		return;
 	}// add a state here something along the lines if (asleep), dont respawn!
@@ -1218,6 +1227,15 @@ void PutClientInServer (edict_t *ent)
 	ent->s.angles[ROLL] = 0;
 	VectorCopy (ent->s.angles, client->ps.viewangles);
 	VectorCopy (ent->s.angles, client->v_angle);
+
+	//added
+	ent->client->lowlight = 0;
+	gi.cvar_forceset("gl_saturatelighting", "0");
+	gi.cvar_forceset("r_fullbright", "0");
+
+	ent->client->lowerlight = 0;
+	//gi.cvar_forceset("gl_saturatelighting", "0");
+	//gi.cvar_forceset("r_fullbright", "0");
 
 	// spawn a spectator
 	if (client->pers.spectator) {
@@ -1569,6 +1587,7 @@ usually be a couple times for each server frame.
 void ClientThink(edict_t *ent, usercmd_t *ucmd)
 {
 	
+
 	gclient_t	*client;
 	edict_t	*other;
 	int		i, j;
@@ -1749,19 +1768,39 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
 
 	if (ent->poison_level > 0)
 	{
-		//T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
+
 		if (ent->poison_step <= 0)
 		{
-		
-			T_Damage(ent, ent->poisoner, ent->poisoner, zero, ent->s.origin, zero, ent->poison_damage, 0, 0, 0);
+
+			T_Damage(ent, ent->poisoner, ent->poisoner, zero, ent->s.origin, zero, ent->poison_damage, 0, 0, MOD_TRANQUILIZER);
+			
 			ent->poison_level--;
-			ent->poison_step = 10;
+			ent->poison_step = 70; //was 10 100 works pretty good, very slow ticking to death (all tested in single player
 		}
 		else
 		{
-			ent->poison_level--;
+			ent->poison_step--;
 		}
+
+		
 	}
+
+	if (ent->health <= 50 && ent->health > 25)
+	{
+		ent->client->lowlight = 1;
+		ent->client->ps.fov = 60;
+	}
+
+		//Cmd_Lowlight_f(ent); // if playerhealth under 50 activate lowlight
+
+	if (ent->health <= 25 && ent->health > 1)
+	{
+		ent->client->lowerlight = 1;
+		ent->client->ps.fov = 45;
+	}
+		//Cmd_Lowerlight_f(ent);
+
+	
 }
 /*
 ==============
@@ -1794,26 +1833,26 @@ void ClientBeginServerFrame (edict_t *ent)
 	else
 		client->weapon_thunk = false;
 
-	if (ent->deadflag)
+	/*if (ent->deadflag)
 	{
 		// wait for any button just going down
 		if ( level.time > client->respawn_time)
 		{
-			// in deathmatch, only wait for attack button
+			// in deathmatch, only wait for attack button // was off
 			if (deathmatch->value)
-				buttonMask = BUTTON_ATTACK;
+				buttonMask = BUTTON_ATTACK; // was BUTTON_ATTACK
 			else
 				buttonMask = -1;
 
 			if ( ( client->latched_buttons & buttonMask ) ||
 				(deathmatch->value && ((int)dmflags->value & DF_FORCE_RESPAWN) ) )
 			{
-				respawn(ent);
+				respawn(ent); // was off
 				client->latched_buttons = 0;
 			}
 		}
 		return;
-	}
+	}*/ // turns off respawn by button attack and only through quad usage u can respawn
 
 	//add player trail so monsters can follow
 	if (!deathmatch->value)
@@ -1821,10 +1860,5 @@ void ClientBeginServerFrame (edict_t *ent)
 			PlayerTrail_Add (ent->s.old_origin);
 
 	client->latched_buttons = 0;
-	/*
-	float poison_level; // damage over time
-	int poison_damage; // initial damage
-
-	edict_t *poisoner; // the player who inflicted the poison
-	*/
+	
 }

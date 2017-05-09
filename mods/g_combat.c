@@ -363,7 +363,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	int			asave;
 	int			psave;
 	int			te_sparks;
-
+	edict_t *ent;
 	if (!targ->takedamage)// why is this line of code here? isnt the function T_Damage called when a player takes damage?
 		return;
 
@@ -474,6 +474,8 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 
 
 		targ->health = targ->health - take;
+
+		
 			
 		if (targ->health <= 0)
 		{
@@ -483,6 +485,16 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 			return;
 		}
 	}
+	/*
+	if (targ->health <= 50 && targ->health > 25)
+		Cmd_Lowlight_f(targ); // if playerhealth under 50 activate lowlight
+
+	if (targ->health <= 25 && targ->health > 1)
+
+		Cmd_Lowerlight_f(targ);
+
+	*/
+	
 
 	if (targ->svflags & SVF_MONSTER)
 	{
